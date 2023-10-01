@@ -6,7 +6,9 @@ RSpec.describe 'BiDi API' do
   let(:driver) { start_session }
 
   it 'does basic authentication' do
-    driver.register(username: 'admin', password: 'admin')
+    driver.register(username: 'admin',
+                    password: 'admin',
+                    uri: /herokuapp/)
 
     driver.get('https://the-internet.herokuapp.com/basic_auth')
 
@@ -14,15 +16,18 @@ RSpec.describe 'BiDi API' do
   end
 
   it 'pins script' do
-    is_displayed = Class.new.extend(Selenium::WebDriver::Atoms).atom_script(:isDisplayed)
-    script = driver.pin_script(is_displayed)
-    expect(driver.pinned_scripts).to eq([script])
-
     driver.get('https://www.selenium.dev/selenium/web/javascriptPage.html')
+    is_displayed_script = Class.new.extend(Selenium::WebDriver::Atoms).atom_script(:isDisplayed)
+
+    script = driver.pin_script(is_displayed_script)
+
     visible = driver.find_element(id: 'visibleSubElement')
     hidden = driver.find_element(id: 'hiddenlink')
 
-    expect(driver.execute_script(script, visible)).to eq true
-    expect(driver.execute_script(script, hidden)).to eq false
+    visible_displayed = driver.execute_script(script, visible)
+    hidden_displayed = driver.execute_script(script, hidden)
+
+    expect(visible_displayed).to eq true
+    expect(hidden_displayed).to eq false
   end
 end

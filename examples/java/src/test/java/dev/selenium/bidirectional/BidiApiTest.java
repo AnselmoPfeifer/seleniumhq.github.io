@@ -3,8 +3,10 @@ package dev.selenium.bidirectional;
 import com.google.common.io.Resources;
 import dev.selenium.BaseTest;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Credentials;
 import org.openqa.selenium.HasAuthentication;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.ScriptKey;
@@ -16,43 +18,50 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class BidiApiTest extends BaseTest {
 
-  @Test
-  public void basicAuth() {
+  @BeforeEach
+  public void createSession() {
     driver = new ChromeDriver();
+  }
 
+  @Test
+  public void basicAuthentication() {
     Predicate<URI> uriPredicate = uri -> uri.toString().contains("herokuapp.com");
-    ((HasAuthentication) driver).register(uriPredicate, UsernameAndPassword.of("admin", "admin"));
+    Supplier<Credentials> authentication = UsernameAndPassword.of("admin", "admin");
+    ((HasAuthentication) driver).register(uriPredicate, authentication);
 
     driver.get("https://the-internet.herokuapp.com/basic_auth");
     driver.findElement(By.tagName("p")).isDisplayed();
-    Assertions.assertEquals(
-        "Congratulations! You must have the proper credentials.",
-        driver.findElement(By.tagName("p")).getText());
+    String successMessage = "Congratulations! You must have the proper credentials.";
+    WebElement elementMessage = driver.findElement(By.tagName("p"));
+    Assertions.assertEquals(successMessage, elementMessage.getText());
   }
 
   @Test
   public void pinScript() throws IOException {
-    driver = new ChromeDriver();
-
-    URL resource = getClass().getResource("/org/openqa/selenium/remote/isDisplayed.js");
-    String function = Resources.toString(resource, StandardCharsets.UTF_8);
-    String isDisplayed =
-        String.format("/* isDisplayed */return (%s).apply(null, arguments);", function);
-
-    JavascriptExecutor jsExecutor = (JavascriptExecutor) driver;
-    ScriptKey displayedKey = jsExecutor.pin(isDisplayed);
-
     driver.get("https://www.selenium.dev/selenium/web/javascriptPage.html");
 
-    WebElement hiddenLink = driver.findElement(By.id("hiddenlink"));
-    WebElement shown = driver.findElement(By.id("visibleSubElement"));
+    URL resource = getClass().getResource("/org/openqa/selenium/remote/isDisplayed.js");
+    String function = Resources.toString(Objects.requireNonNull(resource), StandardCharsets.UTF_8);
+    String format = "/* isDisplayed */return (%s).apply(null, arguments);";
+    String isDisplayedScript = String.format(format, function);
 
-    Assertions.assertFalse((Boolean) jsExecutor.executeScript(displayedKey, hiddenLink));
-    Assertions.assertTrue((Boolean) jsExecutor.executeScript(displayedKey, shown));
+    JavascriptExecutor jsExecutor = (JavascriptExecutor) driver;
+    ScriptKey displayedKey = jsExecutor.pin(isDisplayedScript);
+
+    WebElement hidden = driver.findElement(By.id("hiddenlink"));
+    WebElement visible = driver.findElement(By.id("visibleSubElement"));
+
+    Object isVisibleDisplayed = jsExecutor.executeScript(displayedKey, visible);
+    Object isHiddenDisplayed = jsExecutor.executeScript(displayedKey, hidden);
+
+    Assertions.assertTrue((Boolean) isVisibleDisplayed);
+    Assertions.assertFalse((Boolean) isHiddenDisplayed);
   }
 
   @Test
