@@ -13,7 +13,7 @@ RSpec.describe 'Execute CDP' do
     driver.execute_cdp('Network.setCookie', **cookie)
 
     driver.get('https://www.selenium.dev')
-    cheese = driver.manage.cookie_named(cookie['cheese'])
+    cheese = driver.manage.cookie_named(cookie[:name])
 
     expect(cheese[:value]).to eq 'gouda'
   end
