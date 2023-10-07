@@ -77,7 +77,7 @@ public class CdpApiTest extends BaseTest {
       metrics.put(metric.getName(), metric.getValue());
     }
 
-    Assertions.assertTrue(metrics.get("ProcessTime").doubleValue() > 0);
+    Assertions.assertTrue(metrics.get("DevToolsCommandDuration").doubleValue() > 0);
     Assertions.assertEquals(12, metrics.get("Frames").intValue());
   }
 

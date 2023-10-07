@@ -54,7 +54,7 @@ public class CdpEndpointTest extends BaseTest {
       metrics.put((String) metric.get("name"), (Number) metric.get("value"));
     }
 
-    Assertions.assertTrue(metrics.get("ProcessTime").doubleValue() > 0);
+    Assertions.assertTrue(metrics.get("DevToolsCommandDuration").doubleValue() > 0);
     Assertions.assertEquals(12, metrics.get("Frames").intValue());
   }
 
