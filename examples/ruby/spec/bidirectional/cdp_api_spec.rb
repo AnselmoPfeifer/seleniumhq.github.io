@@ -27,7 +27,7 @@ RSpec.describe 'Chrome DevTools' do
       hash[metric['name']] = metric['value']
     end
 
-    expect(metrics['ProcessTime']).to be > 0
+    expect(metrics['DevToolsCommandDuration']).to be > 0
     expect(metrics['Frames']).to eq 12
   end
 

@@ -24,7 +24,7 @@ def test_performance(driver):
 
     metrics = {metric["name"]: metric["value"] for metric in metric_list}
 
-    assert metrics["ProcessTime"] > 0
+    assert metrics["DevToolsCommandDuration"] > 0
     assert metrics["Frames"] == 12
 
 

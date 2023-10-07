@@ -63,7 +63,7 @@ namespace SeleniumDocs.Bidirectional
                 dict => dict.Name,
                 dict => dict.Value);
 
-            Assert.IsTrue(metrics["ProcessTime"] > 0);
+            Assert.IsTrue(metrics["DevToolsCommandDuration"] > 0);
             Assert.AreEqual(12, metrics["Frames"]);
         }
 

@@ -13,7 +13,7 @@ RSpec.describe 'Execute CDP' do
     driver.execute_cdp('Network.setCookie', **cookie)
 
     driver.get('https://www.selenium.dev')
-    cheese = driver.manage.cookie_named(cookie['name'])
+    cheese = driver.manage.cookie_named(cookie['cheese'])
 
     expect(cheese[:value]).to eq 'gouda'
   end
@@ -28,7 +28,7 @@ RSpec.describe 'Execute CDP' do
       hash[metric['name']] = metric['value']
     end
 
-    expect(metrics['ProcessTime']).to be > 0
+    expect(metrics['DevToolsCommandDuration']).to be > 0
     expect(metrics['Frames']).to eq 12
   end
 

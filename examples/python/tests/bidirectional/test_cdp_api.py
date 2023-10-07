@@ -33,7 +33,7 @@ async def test_performance(driver):
 
     metrics = {metric.name: metric.value for metric in metric_list}
 
-    assert metrics["ProcessTime"] > 0
+    assert metrics["DevToolsCommandDuration"] > 0
     assert metrics["Frames"] == 12
 
 
@@ -44,8 +44,7 @@ async def test_basic_auth(driver):
         credentials = base64.b64encode("admin:admin".encode()).decode()
         auth = {'authorization': 'Basic ' + credentials}
         await connection.session.execute(connection.devtools.network.set_extra_http_headers(Headers(auth)))
-
-    driver.get('https://the-internet.herokuapp.com/basic_auth')
+        driver.get('https://the-internet.herokuapp.com/basic_auth')
 
     success = driver.find_element(by=By.TAG_NAME, value='p')
     assert success.text == 'Congratulations! You must have the proper credentials.'
