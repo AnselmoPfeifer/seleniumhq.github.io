@@ -6,8 +6,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -123,25 +122,26 @@ public class CdpApiTest extends BaseTest {
 
     devTools = ((HasDevTools) driver).getDevTools();
     devTools.createSession();
-
-    CountDownLatch latch = new CountDownLatch(1);
+    int downloadCount = 0;
     devTools.send(
         Browser.setDownloadBehavior(
-            Browser.SetDownloadBehaviorBehavior.ALLOW,
+            Browser.SetDownloadBehaviorBehavior.ALLOWANDNAME,
             Optional.empty(),
             Optional.of(""),
             Optional.of(true)));
 
+    CopyOnWriteArrayList<String> downloads = new CopyOnWriteArrayList<>();
     devTools.addListener(
         Browser.downloadProgress(),
         e -> {
           if (Objects.equals(e.getState().toString(), "completed")) {
-            latch.countDown();
+            downloads.add(e.getGuid());
           }
         });
 
     driver.findElement(By.id("file-2")).click();
-    Assertions.assertTrue(latch.await(10, TimeUnit.SECONDS));
+    new WebDriverWait(driver, Duration.ofSeconds(5)).until(_d -> downloads.size() > downloadCount);
+//    Assertions.assertTrue(latch.await(10, TimeUnit.SECONDS));
   }
 
   @Test

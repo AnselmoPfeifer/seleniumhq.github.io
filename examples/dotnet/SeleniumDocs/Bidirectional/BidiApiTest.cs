@@ -74,13 +74,14 @@ namespace SeleniumDocs.Bidirectional
         [TestMethod]
         public async Task InterceptNetworkRequest()
         {
-            var handler = new NetworkRequestHandler()
+            var handler = new NetworkRequestHandler
             {
-                RequestMatcher = _ => true,
-                ResponseSupplier = _ => new HttpResponseData
+                RequestMatcher = request => request.Url.Contains("one.js"),
+                RequestTransformer = request =>
                 {
-                    StatusCode = 200,
-                    Body = "Creamy, delicious cheese!"
+                    request.Url = request.Url.Replace("one", "two");
+
+                    return request;
                 }
             };
 
@@ -88,10 +89,11 @@ namespace SeleniumDocs.Bidirectional
             networkInterceptor.AddRequestHandler(handler);
 
             await networkInterceptor.StartMonitoring();
-            driver.Navigate().GoToUrl("https://www.selenium.dev");
+            driver.Url = "https://www.selenium.dev/selenium/web/devToolsRequestInterceptionTest.html";
+            driver.FindElement(By.TagName("button")).Click();
             await networkInterceptor.StopMonitoring();
 
-            StringAssert.Contains(driver.PageSource, "delicious cheese");
+            Assert.AreEqual("two", driver.FindElement(By.Id("result")).Text);
         }
 
         private string IsDisplayedScript()

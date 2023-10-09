@@ -18,7 +18,7 @@ RSpec.describe 'Execute CDP' do
     expect(cheese[:value]).to eq 'gouda'
   end
 
-  it 'uses performance metrics' do
+  it 'gets performance metrics' do
     driver.get('https://www.selenium.dev/selenium/web/frameset.html')
 
     driver.execute_cdp('Performance.enable')
@@ -32,7 +32,7 @@ RSpec.describe 'Execute CDP' do
     expect(metrics['Frames']).to eq 12
   end
 
-  it 'does basic authentication' do
+  it 'sets basic authentication' do
     driver.execute_cdp('Network.enable')
 
     credentials = Base64.strict_encode64('admin:admin')
