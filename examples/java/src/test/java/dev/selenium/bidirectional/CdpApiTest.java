@@ -2,29 +2,27 @@ package dev.selenium.bidirectional;
 
 import com.google.common.collect.ImmutableMap;
 import dev.selenium.BaseTest;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Base64;
-import java.util.ArrayList;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
-import org.openqa.selenium.Cookie;
-import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.devtools.DevTools;
 import org.openqa.selenium.devtools.HasDevTools;
+import org.openqa.selenium.devtools.v117.browser.Browser;
 import org.openqa.selenium.devtools.v117.network.Network;
 import org.openqa.selenium.devtools.v117.network.model.Headers;
 import org.openqa.selenium.devtools.v117.performance.Performance;
 import org.openqa.selenium.devtools.v117.performance.model.Metric;
 import org.openqa.selenium.devtools.v117.runtime.Runtime;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class CdpApiTest extends BaseTest {
   DevTools devTools;
@@ -101,25 +99,80 @@ public class CdpApiTest extends BaseTest {
   }
 
   @Test
-  public void consoleLogs() throws InterruptedException {
-    CountDownLatch latch = new CountDownLatch(1);
+  public void consoleLogs() {
+    driver.get("https://www.selenium.dev/selenium/web/bidi/logEntryAdded.html");
 
     DevTools devTools = ((HasDevTools) driver).getDevTools();
     devTools.createSession();
     devTools.send(Runtime.enable());
 
-    List<String> messages = new ArrayList<>();
+    CopyOnWriteArrayList<String> messages = new CopyOnWriteArrayList<>();
     devTools.addListener(
         Runtime.consoleAPICalled(),
-        event -> {
-          String value = (String) event.getArgs().get(0).getValue().orElse("");
-          messages.add(value);
-          latch.countDown();
+        event -> messages.add((String) event.getArgs().get(0).getValue().orElse("")));
+
+    ((JavascriptExecutor) driver).executeScript("console.log('I love cheese')");
+
+    new WebDriverWait(driver, Duration.ofSeconds(5)).until(_d -> !messages.isEmpty());
+    Assertions.assertEquals("I love cheese", messages.get(0));
+  }
+
+  @Test
+  public void waitForDownload() throws InterruptedException {
+    driver.get("https://www.selenium.dev/selenium/web/downloads/download.html");
+
+    devTools = ((HasDevTools) driver).getDevTools();
+    devTools.createSession();
+
+    CountDownLatch latch = new CountDownLatch(1);
+    devTools.send(
+        Browser.setDownloadBehavior(
+            Browser.SetDownloadBehaviorBehavior.ALLOW,
+            Optional.empty(),
+            Optional.of(""),
+            Optional.of(true)));
+
+    devTools.addListener(
+        Browser.downloadProgress(),
+        e -> {
+          if (Objects.equals(e.getState().toString(), "completed")) {
+            latch.countDown();
+          }
         });
 
-    driver.get("https://www.selenium.dev/selenium/web/xhtmlTest.html");
-    ((JavascriptExecutor) driver).executeScript("console.log('I love cheese')");
-    latch.await();
-    Assertions.assertEquals("I love cheese", messages.get(0));
+    driver.findElement(By.id("file-2")).click();
+    Assertions.assertTrue(latch.await(10, TimeUnit.SECONDS));
+  }
+
+  @Test
+  public void waitForPageLoad() throws InterruptedException {
+    ChromeOptions options = new ChromeOptions();
+    options.setPageLoadStrategy(PageLoadStrategy.NONE);
+    WebDriver fastLoadDriver = new ChromeDriver(options);
+
+    devTools = ((HasDevTools) fastLoadDriver).getDevTools();
+    devTools.createSession();
+    devTools.send(Network.enable(Optional.empty(), Optional.empty(), Optional.empty()));
+
+    Map<String, Object> requests = new ConcurrentHashMap<>();
+    devTools.addListener(
+        Network.requestWillBeSent(), r -> requests.put(r.getRequestId().toString(), r));
+    devTools.addListener(
+        Network.responseReceived(), r -> requests.remove(r.getRequestId().toString()));
+
+    fastLoadDriver.get("https://www.nytimes.com");
+
+    long startTime = System.currentTimeMillis();
+    int requestSize = requests.size();
+
+    while ((System.currentTimeMillis() - startTime) < 2000) {
+      System.out.println("Pending requests count: " + requests.size());
+      if (requests.size() == requestSize) {
+        Thread.sleep(200);
+      } else {
+        startTime = System.currentTimeMillis();
+        requestSize = requests.size();
+      }
+    }
   }
 }
